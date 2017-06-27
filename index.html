@@ -1,0 +1,142 @@
+<html>
+<head>
+</head>
+  <script src="https://code.jquery.com/jquery-3.2.1.slim.js"></script>
+  <script src="three.min.js"></script>
+<body>
+<script>
+
+var scene, sceneRTT, camera, renderer;
+var geometry, material, mesh;
+var rtTexture;
+var specialTexture;
+var specialMesh;
+
+var WW = 512; 
+var HH = 512;
+
+init();
+
+function init() {
+
+  scene = new THREE.Scene();
+  sceneRTT = new THREE.Scene();
+
+  camera = new THREE.OrthographicCamera( - WW / 2, WW / 2, HH / 2, - HH / 2, 0.1, 10 );
+  camera.position.z = 10;
+
+  THREE.ImageUtils.crossOrigin = '';
+
+  createScene();
+  createRenderTextureScene();
+
+  renderer = new THREE.WebGLRenderer();
+  renderer.setPixelRatio(window.devicePixelRatio ? window.devicePixelRatio : 1)
+  renderer.setSize( WW, HH );        
+
+  document.body.appendChild( renderer.domElement );
+
+}
+
+function createScene() {
+
+  var bgTexture = new THREE.ImageUtils.loadTexture( 'achtergrond.jpg' , {}, function() {
+    render();
+  });
+  var bgMaterial = new THREE.MeshBasicMaterial( { map: bgTexture, side: THREE.DoubleSide } );
+
+  var squareGeometry = new THREE.PlaneGeometry( 512, 512 );
+
+  var squareMaterial = new THREE.MeshBasicMaterial({ 
+    color:0xFFFFFF, 
+    side:THREE.DoubleSide 
+  }); 
+
+  var squareMesh = new THREE.Mesh(squareGeometry, bgMaterial); 
+  scene.add(squareMesh); 
+
+  var specialTexture = new THREE.ImageUtils.loadTexture( 'babes.jpg' , {}, function() {
+    render();
+  });
+  var alphaTexture = new THREE.ImageUtils.loadTexture( 'mask.png' , {}, function() {
+    render();
+  });
+
+  rtTexture = new THREE.WebGLRenderTarget( WW * window.devicePixelRatio , HH * window.devicePixelRatio , { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, format: THREE.RGBFormat } );
+
+  bgTexture.wrapS = bgTexture.wrapT = THREE.RepeatWrapping; 
+  bgTexture.repeat.set( 1, 1 );
+  var bgMaterial = new THREE.MeshBasicMaterial( { 
+    map: rtTexture, 
+    side: THREE.DoubleSide,
+    alphaMap: alphaTexture,
+    transparent: true
+  } );
+
+
+  var squareGeometry = new THREE.PlaneGeometry( 512, 512 );
+  var squareMesh = new THREE.Mesh(squareGeometry, bgMaterial); 
+  scene.add(squareMesh); 
+
+}
+
+function createRenderTextureScene() {
+
+  var squareGeometry = new THREE.PlaneGeometry( 202, 202 );
+  console.log(squareGeometry.vertices);
+  squareGeometry.vertices[0].x = 94 - WW / 2;  
+  squareGeometry.vertices[0].y = (HH / 2) - 104;
+  squareGeometry.vertices[1].x = 430 - WW / 2;  
+  squareGeometry.vertices[1].y = (HH / 2) - 104;
+  squareGeometry.vertices[2].x = 57 - WW / 2;  
+  squareGeometry.vertices[2].y = (HH / 2) - 335;  
+  squareGeometry.vertices[3].x = 465 - WW / 2;  
+  squareGeometry.vertices[3].y = (HH / 2) - 335;
+
+  specialMesh = new THREE.Mesh(squareGeometry,  materialWithTexture('babes.jpg')); 
+  sceneRTT.add(specialMesh); 
+}
+
+function materialWithTexture(path) {
+  var texture = new THREE.ImageUtils.loadTexture( path , {}, function() {
+    render();
+  });
+  return new THREE.MeshBasicMaterial( { map: texture, side: THREE.DoubleSide } );
+}
+
+function render() {
+
+  renderer.render( sceneRTT, camera, rtTexture, true );
+  renderer.render( scene, camera );
+
+}
+
+</script>
+<br><input id="userImage" type="file"/>
+<script>
+$("#userImage").change(function () {
+    var image = document.createElement( 'img' );
+    specialTexture = new THREE.Texture( image );
+    image.onload = function()  {
+        specialTexture.needsUpdate = true;
+        specialMesh.material = new THREE.MeshBasicMaterial( { map: specialTexture, side: THREE.DoubleSide } );
+        render();
+    };
+    
+    userImage = $("#userImage")[0];
+    if (userImage.files && userImage.files[0]) {
+        var reader = new FileReader();
+        
+        reader.onload = function (e) {
+            image.src = e.target.result;
+        };
+        
+        reader.readAsDataURL(userImage.files[0]);
+    }
+
+});
+
+
+</script>
+</body>
+</html>
